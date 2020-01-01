@@ -8,7 +8,7 @@
 
 
     <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_category"
+            android:id="@+id/rv_movie"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             tools:listitem="@layout/item_row"
@@ -16,6 +16,8 @@
             android:clipToPadding="false"
             android:visibility="visible"
     />
+
+
     <ProgressBar
             android:id="@+id/progressBar"
             style="?android:attr/progressBarStyle"
@@ -27,6 +29,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             android:visibility="gone"/>
+
 
     <LinearLayout
             android:id="@+id/view_no_data"
@@ -58,10 +61,8 @@
                 android:id="@+id/tv_no_data"
                 android:layout_width="150dp"
                 android:layout_height="wrap_content"
-                android:text="@string/error_msg_bad_connection"
                 android:textColor="@color/black"
                 android:fontFamily="@font/exo"
                 android:textSize="10sp"/>
     </LinearLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

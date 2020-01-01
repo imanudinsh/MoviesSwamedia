@@ -6,8 +6,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:transitionName="container"
-        android:background="@color/white"
-        tools:context=".ui.favorite.FavoriteActivity">
+        android:background="@color/white">
 
 
     <com.google.android.material.appbar.AppBarLayout
@@ -26,7 +25,8 @@
                 app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
                 app:layout_collapseMode="pin"
                 android:background="@color/white"
-                android:theme="@style/ThemeOverlay.AppCompat.Light" android:gravity="center_vertical">
+                android:theme="@style/ThemeOverlay.AppCompat.Light"
+                android:gravity="center_vertical">
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
