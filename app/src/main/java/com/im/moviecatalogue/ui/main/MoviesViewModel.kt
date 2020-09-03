@@ -13,7 +13,6 @@ import com.im.moviecatalogue.vo.Resource
 class MoviesViewModel(mMovieRepository: MovieRepository) : ViewModel() {
 
      var movieRepository: MovieRepository = mMovieRepository
-     val movieId = MutableLiveData<String>()
      val page = MutableLiveData<Int>()
      val genres = MutableLiveData<String>()
 
@@ -27,10 +26,6 @@ class MoviesViewModel(mMovieRepository: MovieRepository) : ViewModel() {
           )
      }
 
-     var allGenres = Transformations.switchMap<Int, Resource<List<GenreEntity>>>(
-          page
-     ) {
-          movieRepository.allGenres()
-     }
+     var allGenres = movieRepository.allGenres()
 
 }
