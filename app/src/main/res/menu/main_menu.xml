@@ -3,9 +3,9 @@
       xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-            android:id="@+id/action_favorite"
-            android:title="@string/favorite"
-            android:icon="@drawable/ic_heart"
+            android:id="@+id/action_signout"
+            android:title="@string/login"
+            android:icon="@drawable/ic_signout"
             app:showAsAction="always"/>
 
 

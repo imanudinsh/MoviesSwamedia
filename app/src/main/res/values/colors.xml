@@ -8,7 +8,11 @@
     <color name="black">#000000</color>
     <color name="blackSoft">#636363</color>
     <color name="grey">#7E7E7E</color>
+    <color name="greySoft">#AFAFAF</color>
+    <color name="grey60">#60AFAFAF</color>
     <color name="yellow">#F3AC13</color>
     <color name="transparent">#00FFFFFF</color>
     <color name="red">#e74011</color>
+    <color name="green">#37C4AA</color>
+    <color name="greenSoft">#EFF9F7</color>
 </resources>

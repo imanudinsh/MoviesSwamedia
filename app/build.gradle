@@ -48,6 +48,8 @@ dependencies {
 
     // database
     implementation 'androidx.room:room-runtime:2.2.2'
+    implementation 'androidx.wear:wear:1.0.0'
+    compileOnly 'com.google.android.wearable:wearable:2.5.0'
     kapt 'androidx.room:room-compiler:2.2.2'
 
     // paging

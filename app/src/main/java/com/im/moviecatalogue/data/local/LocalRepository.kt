@@ -1,71 +1,42 @@
 package com.im.moviecatalogue.data.local
 
-import android.util.Log
 import androidx.lifecycle.LiveData
-import com.im.moviecatalogue.data.local.entity.FavoriteEntity
+import com.im.moviecatalogue.data.local.entity.GenreEntity
 
 import com.im.moviecatalogue.data.local.entity.MovieEntity
-import com.im.moviecatalogue.data.local.entity.TvShowEntity
+import com.im.moviecatalogue.data.local.room.GenreDao
 import com.im.moviecatalogue.data.local.room.MovieDao
-import androidx.paging.DataSource
 
 
-class LocalRepository private constructor(private val mMovieDao: MovieDao) {
+class LocalRepository private constructor(private val mMovieDao: MovieDao, private val mGenreDao: GenreDao) {
 
-    // TV Shows
 
-    fun allTvShows(): LiveData<List<TvShowEntity>>
+    fun allMovies(page : Int): LiveData<List<MovieEntity>>
     {
-        return mMovieDao.getAllTvShows()
-    } 
-
-    fun insertTvShows(tv: List<TvShowEntity>) {
-        mMovieDao.insertTvShows(tv)
-    }
-
-
-
-    // Movies
-
-    fun allMovies(): LiveData<List<MovieEntity>>
-    {
-        return mMovieDao.getAllMovies()
+        val offset = ((page-1)* 20)
+        return mMovieDao.getAllMovies(offset)
     }
 
     fun insertMovies(movies: List<MovieEntity>) {
         mMovieDao.insertMovies(movies)
     }
 
-
-    // Favorite
-
-    fun allFavorites(category: String): DataSource.Factory<Int, FavoriteEntity>
+    fun allGenres(): LiveData<List<GenreEntity>>
     {
-        return mMovieDao.getFavorites(category)
+        return mGenreDao.getAllGenre()
     }
 
-    fun favoriteById(movieId: String, category: String): LiveData<List<FavoriteEntity>>
-    {
-        Log.d("LocalRepo","$movieId $category")
-        return mMovieDao.getFavoriteById(movieId, category)
+    fun insertGenres(genres: List<GenreEntity>) {
+        mGenreDao.insertGenres(genres)
     }
-
-    fun insertFavorite(favorite: FavoriteEntity) {
-        mMovieDao.insertFavorite(favorite)
-    }
-
-    fun deleteFavorite(favorite: FavoriteEntity){
-        mMovieDao.deleteFavorite(favorite)
-    }
-
 
     companion object {
 
         private var INSTANCE: LocalRepository? = null
 
-        fun getInstance(movieDao: MovieDao): LocalRepository {
+        fun getInstance(movieDao: MovieDao, genreDao: GenreDao): LocalRepository {
             if (INSTANCE == null) {
-                INSTANCE = LocalRepository(movieDao)
+                INSTANCE = LocalRepository(movieDao, genreDao)
             }
             return INSTANCE as LocalRepository
         }

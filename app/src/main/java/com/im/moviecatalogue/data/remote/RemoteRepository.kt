@@ -1,29 +1,66 @@
 package com.im.moviecatalogue.data.remote
 
-import android.os.Handler
 import android.util.Log
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.im.moviecatalogue.BuildConfig
+import com.im.moviecatalogue.data.local.entity.GenreEntity
 import com.im.moviecatalogue.data.local.entity.MovieEntity
-import com.im.moviecatalogue.data.local.entity.TvShowEntity
-import com.im.moviecatalogue.utils.EspressoIdlingResource
+import com.im.moviecatalogue.data.remote.response.Review
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.lang.Exception
 
 class RemoteRepository() {
-    private val SERVICE_LATENCY_IN_MILLIS: Long = 2000
     private val apiServices = ApiService.client.create(ApiInteractor::class.java)
 
-    fun allMoviesAsLiveData(): LiveData<ApiResponse<List<MovieEntity>>>{
-        val result = MutableLiveData<ApiResponse<List<MovieEntity>>>()
+    fun allGenresAsLiveData(): LiveData<ApiResponse<List<GenreEntity>>>{
+        val result = MutableLiveData<ApiResponse<List<GenreEntity>>>()
+        val request = mapOf(
+            "api_key" to BuildConfig.MOVIE_API_KEY,
+            "language" to "en-US"
+        )
+
         try {
-            EspressoIdlingResource.increment()
             runBlocking {
                 launch {
-                    val responses = apiServices.getMovie().await()
-                    if(responses.results.size > 0){
+                    Log.d("MovieViewModel", "data $request")
+                    val responses = apiServices.getGenre(request).await()
+                    Log.d("MovieViewModel", "result  $responses")
+                    if(responses.genres.isNotEmpty()){
+                        result.value = ApiResponse.success(responses.genres)
+                    }else
+                    {
+                        result.value = ApiResponse.empty("Movie not available", responses.genres)
+                    }
+                }
+            }
+
+        }catch (ex: Exception){
+            Log.d("MovieViewModel", "result error  ${ex.message}")
+
+            result.value = ApiResponse.empty("${ex.message}", null)
+        }
+        return result
+    }
+
+
+    fun allMoviesAsLiveData(page: String, genres: String): LiveData<ApiResponse<List<MovieEntity>>>{
+        val result = MutableLiveData<ApiResponse<List<MovieEntity>>>()
+        val request = mapOf(
+            "api_key" to BuildConfig.MOVIE_API_KEY,
+            "language" to "en-US",
+            "page" to page
+        )
+
+        try {
+            runBlocking {
+                launch {
+                    Log.d("MovieViewModel", "data $request")
+                    val responses = apiServices.getMovie(request).await()
+                    Log.d("MovieViewModel", "result  $responses")
+                    if(responses.results.isNotEmpty()){
                         result.value = ApiResponse.success(responses.results)
                     }else
                     {
@@ -32,51 +69,21 @@ class RemoteRepository() {
                 }
             }
 
-            if (!EspressoIdlingResource.espressoIdlingResource.isIdleNow()) {
-                EspressoIdlingResource.decrement()
-            }
         }catch (ex: Exception){
+            Log.d("MovieViewModel", "result error  ${ex.message}")
 
             result.value = ApiResponse.empty("${ex.message}", null)
         }
         return result
     }
 
-    fun allTvShowsAsLiveData(): LiveData<ApiResponse<List<TvShowEntity>>>{
-        EspressoIdlingResource.increment()
-        val result = MutableLiveData<ApiResponse<List<TvShowEntity>>>()
-        try {
-            runBlocking {
-                launch {
-                    val responses = apiServices.getTvShow().await()
-                    if(responses.results.size > 0){
-                        result.postValue( ApiResponse.success(responses.results))
-                    }else
-                    {
-                        result.postValue(ApiResponse.empty("Movie not available", responses.results))
-                    }
-                }
-            }
-
-            if (!EspressoIdlingResource.espressoIdlingResource.isIdleNow()) {
-                EspressoIdlingResource.decrement()
-            }
-        }catch (ex: Exception){
-
-            result.postValue(ApiResponse.empty("${ex.message}", null))
-        }
-        return result
-    }
-
-    fun getTrailer(id: String, category: String): LiveData<ApiResponse<String>>{
+    fun getTrailer(id: String): LiveData<ApiResponse<String>>{
         println("getTrailer")
         val result = MutableLiveData<ApiResponse<String>>()
         try {
-            EspressoIdlingResource.increment()
             runBlocking {
                 launch {
-                    println("getTrailer $id $category")
-                    val responses = apiServices.getTrailer(id = id, category = category).await()
+                    val responses = apiServices.getTrailer(id = id).await()
                     println("getTrailer $responses")
                     responses.results?.let {
                         if(it.size > 0){
@@ -89,9 +96,36 @@ class RemoteRepository() {
                 }
             }
 
-            if (!EspressoIdlingResource.espressoIdlingResource.isIdleNow()) {
-                EspressoIdlingResource.decrement()
+
+        }catch (ex: Exception){
+            result.postValue(ApiResponse.empty("${ex.message}", null))
+        }
+        return result
+    }
+
+    fun getReview(id: String, page: String): LiveData<ApiResponse<List<Review>>>{
+        val request = mapOf(
+            "api_key" to BuildConfig.MOVIE_API_KEY,
+            "language" to "en-US",
+            "page" to page
+        )
+        val result = MutableLiveData<ApiResponse<List<Review>>>()
+        try {
+            runBlocking {
+                launch {
+                    val responses = apiServices.getReview(id = id, data = request).await()
+                    println("getTrailer $responses")
+                    responses.results?.let {
+                        if(it.size > 0){
+                            result.postValue( ApiResponse.success(responses.results))
+                        }else
+                        {
+                            result.postValue(ApiResponse.empty("Trailer not available", responses.results))
+                        }
+                    }
+                }
             }
+
 
         }catch (ex: Exception){
             result.postValue(ApiResponse.empty("${ex.message}", null))

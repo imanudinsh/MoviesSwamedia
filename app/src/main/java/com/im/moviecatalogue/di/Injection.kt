@@ -14,7 +14,7 @@ object Injection {
 
         val database = MovieDatabase.getAppDataBase(application)
 
-        val localRepository = LocalRepository.getInstance(database!!.movieDao())
+        val localRepository = LocalRepository.getInstance(database!!.movieDao(), database!!.genreDao())
         val remoteRepository = RemoteRepository.getInstance()
         val appExecutors = AppExecutors()
 

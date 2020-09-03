@@ -4,14 +4,12 @@ import android.util.Log
 import androidx.annotation.NonNull
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.paging.PagedList
-import androidx.paging.LivePagedListBuilder
 import com.im.moviecatalogue.data.local.LocalRepository
-import com.im.moviecatalogue.data.local.entity.FavoriteEntity
+import com.im.moviecatalogue.data.local.entity.GenreEntity
 import com.im.moviecatalogue.data.local.entity.MovieEntity
-import com.im.moviecatalogue.data.local.entity.TvShowEntity
 import com.im.moviecatalogue.data.remote.ApiResponse
 import com.im.moviecatalogue.data.remote.RemoteRepository
+import com.im.moviecatalogue.data.remote.response.Review
 import com.im.moviecatalogue.utils.AppExecutors
 import com.im.moviecatalogue.vo.Resource
 import kotlinx.coroutines.Dispatchers
@@ -23,51 +21,53 @@ class MovieRepository private constructor(
     private val appExecutors: AppExecutors
 ) : MovieDataSource {
 
-    override val allMovies: LiveData<Resource<List<MovieEntity>>>
-        get() = object :
-            NetworkBoundResource<List<MovieEntity>, List<MovieEntity>>(appExecutors) {
-            override fun shouldFetch(data: List<MovieEntity>): Boolean? {
-                return data.isEmpty()
-            }
+    override fun allGenres(): LiveData<Resource<List<GenreEntity>>>{
+        return object :
+                NetworkBoundResource<List<GenreEntity>, List<GenreEntity>>(appExecutors) {
+                override fun shouldFetch(data: List<GenreEntity>): Boolean? {
+                    return data.isEmpty()
+                }
 
-            override fun loadFromDB(): LiveData<List<MovieEntity>> {
-                return localRepository.allMovies()
-            }
+                override fun loadFromDB(): LiveData<List<GenreEntity>> {
+                    return localRepository.allGenres()
+                }
 
-            override fun createCall(): LiveData<ApiResponse<List<MovieEntity>>> {
+                override fun createCall(): LiveData<ApiResponse<List<GenreEntity>>> {
 
-                return remoteRepository.allMoviesAsLiveData()
-            }
+                    return remoteRepository.allGenresAsLiveData()
+                }
 
-            override fun saveCallResult(data: List<MovieEntity>) {
+                override fun saveCallResult(data: List<GenreEntity>) {
+                    localRepository.insertGenres(data)
+                }
+            }.asLiveData()
+    }
+
+    override fun allMovies(page: String, genres: String): LiveData<Resource<List<MovieEntity>>>{
+        return object :
+                NetworkBoundResource<List<MovieEntity>, List<MovieEntity>>(appExecutors) {
+                override fun shouldFetch(data: List<MovieEntity>): Boolean? {
+                    return data.isEmpty() || page.toInt() > 1
+                }
+
+                override fun loadFromDB(): LiveData<List<MovieEntity>> {
+                    return localRepository.allMovies(page.toInt())
+                }
+
+                override fun createCall(): LiveData<ApiResponse<List<MovieEntity>>> {
+
+                    Log.d("MovieViewModel", "data $page")
+                    return remoteRepository.allMoviesAsLiveData(page, genres)
+                }
+
+                override fun saveCallResult(data: List<MovieEntity>) {
                     localRepository.insertMovies(data)
-            }
-        }.asLiveData()
+                }
+            }.asLiveData()
+    }
 
-    override val allTvShows: LiveData<Resource<List<TvShowEntity>>>
-        get() = object :
-            NetworkBoundResource<List<TvShowEntity>, List<TvShowEntity>>(appExecutors) {
-            override fun shouldFetch(data: List<TvShowEntity>): Boolean? {
-                return data.isEmpty()
-            }
-
-            override fun loadFromDB(): LiveData<List<TvShowEntity>> {
-                return localRepository.allTvShows()
-            }
-
-            override fun createCall(): LiveData<ApiResponse<List<TvShowEntity>>> {
-
-                return remoteRepository.allTvShowsAsLiveData()
-            }
-
-            override fun saveCallResult(data: List<TvShowEntity>) {
-                localRepository.insertTvShows(data)
-            }
-        }.asLiveData()
-
-
-    override fun trailer(id: String, category: String): LiveData<Resource<String>> {
-        Log.d("MovieRepository","$id $category")
+    override fun trailer(id: String): LiveData<Resource<String>> {
+        Log.d("MovieRepository","$id")
 
         val trailerKey = MutableLiveData<String>()
         trailerKey.value = ""
@@ -79,9 +79,8 @@ class MovieRepository private constructor(
             }
 
             override fun saveCallResult(data: String) {
-                GlobalScope.launch(Dispatchers.Main) {
-                    trailerKey.value = data
-                }
+                trailerKey.postValue(data)
+
             }
 
             override fun shouldFetch(data:String): Boolean? {
@@ -92,8 +91,8 @@ class MovieRepository private constructor(
 
             override fun createCall(): LiveData<ApiResponse<String>> {
 
-                Log.d("MovieRepository","$id $category")
-                return remoteRepository.getTrailer(id, category)
+                Log.d("MovieRepository","$id ")
+                return remoteRepository.getTrailer(id)
             }
 
         }.asLiveData()
@@ -101,22 +100,40 @@ class MovieRepository private constructor(
         return tralerResource
     }
 
+    override fun review(id: String, page: String): LiveData<Resource<List<Review>>> {
+        Log.d("MovieRepository","$id")
 
-    override fun allFavorite(category: String): LiveData<PagedList<FavoriteEntity>>  = LivePagedListBuilder(localRepository.allFavorites(category), 10).build()
+        val list : List<Review> = listOf()
+        val reviews = MutableLiveData<List<Review>>()
+        reviews.value = list
 
-    override fun favoriteById(movieId: String, category: String): LiveData<List<FavoriteEntity>> = localRepository.favoriteById(movieId = movieId, category = category)
+        return object :
+            NetworkBoundResource<List<Review>, List<Review>>(appExecutors) {
+            override fun loadFromDB(): LiveData<List<Review>> {
+                return reviews
+            }
+
+            override fun saveCallResult(data: List<Review>) {
+                reviews.postValue(data)
+
+            }
+
+            override fun shouldFetch(data: List<Review>): Boolean? {
+                return true
+            }
 
 
-    override fun insertFavorite(favorite: FavoriteEntity){
-        GlobalScope.launch(Dispatchers.IO) {
-            localRepository.insertFavorite(favorite)
-        }
+
+            override fun createCall(): LiveData<ApiResponse<List<Review>>> {
+
+                Log.d("MovieRepository","$id ")
+                return remoteRepository.getReview(id, page)
+            }
+
+        }.asLiveData()
     }
-    override fun deleteFavorite(favorite: FavoriteEntity){
-        GlobalScope.launch(Dispatchers.IO) {
-            localRepository.deleteFavorite(favorite)
-        }
-    }
+
+
 
 
     companion object {

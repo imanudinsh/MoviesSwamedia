@@ -1,26 +1,26 @@
 package com.im.moviecatalogue.ui.moviedetail
 
-import androidx.lifecycle.ViewModelProviders
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
-import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
+import androidx.lifecycle.ViewModelProviders
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import kotlinx.android.synthetic.main.activity_detail.*
 import com.google.android.youtube.player.YouTubeInitializationResult
 import com.google.android.youtube.player.YouTubePlayer
 import com.google.android.youtube.player.YouTubePlayerSupportFragment
 import com.im.moviecatalogue.BuildConfig
 import com.im.moviecatalogue.R
-import com.im.moviecatalogue.data.local.entity.FavoriteEntity
 import com.im.moviecatalogue.data.local.entity.MovieEntity
-import com.im.moviecatalogue.utils.EspressoIdlingResource
-import com.im.moviecatalogue.utils.values.CategoryEnum
+import com.im.moviecatalogue.data.remote.response.Review
 import com.im.moviecatalogue.viewmodel.ViewModelFactory
 import com.im.moviecatalogue.vo.Status
+import kotlinx.android.synthetic.main.activity_detail.*
 
 
 class MovieDetailActivity : AppCompatActivity(){
@@ -29,19 +29,18 @@ class MovieDetailActivity : AppCompatActivity(){
     private lateinit var viewModel: MovieDetailViewModel
     private lateinit var youTubePlayerFragment: YouTubePlayerSupportFragment
     private lateinit var youTubePlayer: YouTubePlayer
-    private lateinit var category: String
-    private var isFavorite: Boolean = false
+    private lateinit var adapter: ReviewAdapter
+    private lateinit var movie: MovieEntity
+    private var reviewList = mutableListOf<Review>()
 
 
     companion object{
-        const val EXTRA_MOVIE_ID = "EXTRA_MOVIE_ID"
-        const val EXTRA_CATEGORY = "EXTRA_CATEGORY"
         const val EXTRA_DATA = "EXTRA_DATA"
     }
 
 
     private fun obtainViewModel(activity: AppCompatActivity): MovieDetailViewModel {
-        val factory = ViewModelFactory.getInstance(activity.getApplication())
+        val factory = ViewModelFactory.getInstance(activity.application)
         return ViewModelProviders.of(activity, factory).get(MovieDetailViewModel::class.java)
     }
 
@@ -54,58 +53,21 @@ class MovieDetailActivity : AppCompatActivity(){
         supportActionBar?.setDisplayShowTitleEnabled(false)
 
 
-        val item = intent.getParcelableExtra<MovieEntity>(EXTRA_DATA)
-        val itemCategory = intent.getStringExtra(EXTRA_CATEGORY)
+        movie = intent.getParcelableExtra<MovieEntity>(EXTRA_DATA)
 
-        category = if(itemCategory!=null && itemCategory == CategoryEnum.TV.value) CategoryEnum.TV.value else CategoryEnum.MOVIE.value
-        toolbar_title.text= String.format("Detail %s", category)
+        toolbar_title.text= "Detail Movie"
         iv_poster.z = 5f
 
-        setData(item)
-        viewModel = obtainViewModel(this)
-        viewModel.movieId.value = item.id
-        viewModel.category.value = if(itemCategory!=null && itemCategory == CategoryEnum.TV.value) CategoryEnum.TV.api else CategoryEnum.MOVIE.api
+        setData()
+        initRecyclerview()
+        initViewModel()
 
 
-        viewModel.trailerMovie.observe(this, Observer{ resorce ->
-            if (resorce != null) {
-                Log.d("MovieDetailActivity",resorce.toString())
-
-                when (resorce.status) {
-                    Status.SUCCESS -> if (resorce.data != null) {
-                      initializeYoutubePlayer(resorce.data)
-                    }
-                    Status.ERROR -> {
-                        Toast.makeText(applicationContext, "Failed get trailer", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                }
-
-            }
-        })
-
-        viewModel.setFavoriite(item.id, category)
-
-        viewModel.isFavorite.observe(this, Observer<List<FavoriteEntity>> {
-            if (it != null && it.isNotEmpty()) {
-                isFavorite = true
-                val ivAnimation = AnimatedVectorDrawableCompat.create(iv_heart.context, R.drawable.ic_heart_anim)
-                iv_heart.setImageDrawable(ivAnimation)
-                ivAnimation?.start()
-                iv_heart.imageTintList = getColorStateList(R.color.red)
-            }else{
-                iv_heart.setImageDrawable(getDrawable(R.drawable.ic_heart))
-                iv_heart.imageTintList = getColorStateList(R.color.grey)
-                isFavorite = false
-            }
-            Log.d("moviedetailActivity","datanya diobserv $it")
-        })
 
 
     }
 
-    private fun setData(movie: MovieEntity){
-
+    private fun setData(){
         tv_tittle.text = movie.title
         tv_year.text = movie.releaseDate
         tv_synopsis.text = movie.synopsis
@@ -118,20 +80,57 @@ class MovieDetailActivity : AppCompatActivity(){
             .placeholder(R.drawable.img_placeholder)
             .into(iv_poster)
 
-
-        btn_favorite.setOnClickListener {
-            val fav = FavoriteEntity(id= movie.id.toString(), title = movie.title, date = movie.releaseDate, rate = movie.rate, synopsis = movie.synopsis, poster = movie.poster, category = category)
-            if(isFavorite){
-                viewModel.deleteFavorite(fav)
-            }else{
-                viewModel.insertFavorite(fav)
-            }
-        }
 //        initializeYoutubePlayer(movie.trailer)
     }
 
+    private fun initViewModel(){
+        viewModel = obtainViewModel(this)
+        viewModel.movieId.value = movie.id
+        viewModel.page.value = 1
+        viewModel.trailerMovie.observe(this, Observer{ resorce ->
+            if (resorce != null) {
+                Log.d("MovieDetailActivity",resorce.toString())
 
+                when (resorce.status) {
+                    Status.SUCCESS -> if (resorce.data != null) {
+                        initializeYoutubePlayer(resorce.data)
+                    }
+                    Status.ERROR -> {
+                        Toast.makeText(applicationContext, "Failed get trailer", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                }
 
+            }
+        })
+        viewModel.reviewMovie.observe(this, Observer{ resource ->
+            if (resource != null) {
+                Log.d("MovieDetailActivity",resource.toString())
+
+                when (resource.status) {
+                    Status.SUCCESS -> {
+                        progress_bar.visibility = View.GONE
+                        resource.data?.let{ review ->
+                            reviewList.addAll(
+                                review.filter { !reviewList.contains(it) }
+                            )
+                            adapter.notifyDataSetChanged()
+                        }
+                    }
+                    Status.ERROR -> {
+                        progress_bar.visibility = View.GONE
+                        Toast.makeText(applicationContext, "Failed get trailer", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                    Status.LOADING ->{
+                        progress_bar.visibility = View.VISIBLE
+                    }
+                }
+
+            }
+        })
+
+    }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
         android.R.id.home ->{
@@ -146,7 +145,6 @@ class MovieDetailActivity : AppCompatActivity(){
     private fun initializeYoutubePlayer(trailerKey: String) {
 
 
-        EspressoIdlingResource.increment()
         youTubePlayerFragment = supportFragmentManager.findFragmentById(R.id.vv_trailer) as YouTubePlayerSupportFragment
         youTubePlayerFragment.initialize(BuildConfig.YOUTUBE_API_KEY, object : YouTubePlayer.OnInitializedListener {
 
@@ -180,15 +178,29 @@ class MovieDetailActivity : AppCompatActivity(){
                     })
                 }
                 Log.e("DetailActivity", "Youtube Player View initialization success")
-                if (!EspressoIdlingResource.espressoIdlingResource.isIdleNow()) {
-                    EspressoIdlingResource.decrement()
-                }
+
             }
 
             override fun onInitializationFailure(arg0: YouTubePlayer.Provider, arg1: YouTubeInitializationResult) {
                 Log.e("DetailActivity", "Youtube Player View initialization failed")
-                if (!EspressoIdlingResource.espressoIdlingResource.isIdleNow()) {
-                    EspressoIdlingResource.decrement()
+
+            }
+        })
+    }
+
+    private fun initRecyclerview(){
+        adapter = ReviewAdapter(reviewList)
+        rv_review.layoutManager = LinearLayoutManager(this)
+        rv_review.adapter = adapter
+        rv_review.addOnScrollListener(object : RecyclerView.OnScrollListener(){
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (progress_bar.visibility != View.VISIBLE) {
+                    if ((rv_review.layoutManager as LinearLayoutManager).findLastCompletelyVisibleItemPosition() == reviewList.size - 1) {
+                        val page = reviewList.size / 20 + 1
+                        Log.d("MainActivity", "datanya page ke $page ${reviewList.size} ${reviewList.size/20}")
+                        viewModel.page.value = page
+                    }
                 }
             }
         })
