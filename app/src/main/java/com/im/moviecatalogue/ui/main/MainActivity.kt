@@ -10,8 +10,6 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityOptionsCompat
-import androidx.core.util.Pair
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -88,7 +86,7 @@ class MainActivity : AppCompatActivity() {
                 super.onScrolled(recyclerView, dx, dy)
                 if (progress_bar.visibility != View.VISIBLE) {
                     if ((rv_movie.layoutManager as GridLayoutManager).findLastCompletelyVisibleItemPosition() == moviesList.size - 1) {
-                        val page = moviesList.size / 20 + 1
+                        val page = viewModel.page.value?.plus(1)
                         Log.d("MainActivity", "datanya page ke $page ${moviesList.size} ${moviesList.size/20}")
                         viewModel.page.value = page
                     }
@@ -101,7 +99,7 @@ class MainActivity : AppCompatActivity() {
             genreList[position].selected =  !item.selected
             if(position==0){
                 genreList[position].selected = true
-                for(i in 1 .. genreList.size){
+                for(i in 1 .. genreList.size-1){
                     genreList[i].selected = false
                 }
             }
@@ -109,11 +107,22 @@ class MainActivity : AppCompatActivity() {
                 genreList[0].selected = false
             }
             rv_genre.adapter?.notifyDataSetChanged()
+
+            var genre = ""
+            genreList.filter { it.id!=0 && it.selected }.forEach {
+                if(genre.isEmpty()) genre += it.id.toString()
+                else genre += ",${it.id}"
+            }
+            Log.d("MainActivity","genre nich $genre")
+            viewModel.genres.value = genre
+            viewModel.page.value = 1
+
         })
     }
     private fun initViewModel(){
         viewModel= obtainViewModel(activity = this)
         viewModel.page.value = 1
+        viewModel.genres.value = ""
         viewModel.movies.observe(this, Observer { it ->
             Log.d("MainActivity", "message ${it}")
             if(it != null){
@@ -124,6 +133,7 @@ class MainActivity : AppCompatActivity() {
                     Status.SUCCESS -> {
                         progress_bar.visibility = View.GONE
                         it.data?.let{ movies ->
+                            if(viewModel.page.value == 1) moviesList.clear()
                             moviesList.addAll(
                                 movies.filter { movie -> !moviesList.contains(movie) }
                             )

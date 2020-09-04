@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
@@ -20,6 +21,7 @@ import com.im.moviecatalogue.data.local.entity.MovieEntity
 import com.im.moviecatalogue.data.remote.response.Review
 import com.im.moviecatalogue.viewmodel.ViewModelFactory
 import com.im.moviecatalogue.vo.Status
+import com.makeramen.roundedimageview.RoundedImageView
 import kotlinx.android.synthetic.main.activity_detail.*
 
 
@@ -32,6 +34,7 @@ class MovieDetailActivity : AppCompatActivity(){
     private lateinit var adapter: ReviewAdapter
     private lateinit var movie: MovieEntity
     private var reviewList = mutableListOf<Review>()
+    private lateinit var ivPoster: RoundedImageView
 
 
     companion object{
@@ -51,19 +54,15 @@ class MovieDetailActivity : AppCompatActivity(){
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowTitleEnabled(false)
-
+        toolbar_title.text= "Detail Movie"
 
         movie = intent.getParcelableExtra<MovieEntity>(EXTRA_DATA)
-
-        toolbar_title.text= "Detail Movie"
-        iv_poster.z = 5f
+        ivPoster = findViewById(R.id.iv_poster)
+        ivPoster.z = 5f
 
         setData()
         initRecyclerview()
         initViewModel()
-
-
-
 
     }
 
@@ -78,7 +77,7 @@ class MovieDetailActivity : AppCompatActivity(){
         Glide.with(this)
             .load("https://image.tmdb.org/t/p/w185${movie.poster}")
             .placeholder(R.drawable.img_placeholder)
-            .into(iv_poster)
+            .into(ivPoster)
 
 //        initializeYoutubePlayer(movie.trailer)
     }
@@ -146,46 +145,48 @@ class MovieDetailActivity : AppCompatActivity(){
 
 
         youTubePlayerFragment = supportFragmentManager.findFragmentById(R.id.vv_trailer) as YouTubePlayerSupportFragment
-        youTubePlayerFragment.initialize(BuildConfig.YOUTUBE_API_KEY, object : YouTubePlayer.OnInitializedListener {
+        with(youTubePlayerFragment) {
+            initialize(BuildConfig.YOUTUBE_API_KEY, object : YouTubePlayer.OnInitializedListener {
 
-            override fun onInitializationSuccess(
-                provider: YouTubePlayer.Provider, player: YouTubePlayer,
-                wasRestored: Boolean
-            ) {
-                if (!wasRestored) {
-                    youTubePlayer = player
+                override fun onInitializationSuccess(
+                    provider: YouTubePlayer.Provider, player: YouTubePlayer,
+                    wasRestored: Boolean
+                ) {
+                    if (!wasRestored) {
+                        youTubePlayer = player
 
-                    youTubePlayer.setPlayerStyle(YouTubePlayer.PlayerStyle.DEFAULT)
-                    youTubePlayer.cueVideo(trailerKey)
-                    youTubePlayer.setPlaybackEventListener(object : YouTubePlayer.PlaybackEventListener {
-                        override fun onPlaying() {
-                            iv_poster.z = 0f
-                        }
+                        youTubePlayer.setPlayerStyle(YouTubePlayer.PlayerStyle.DEFAULT)
+                        youTubePlayer.cueVideo(trailerKey)
+                        youTubePlayer.setPlaybackEventListener(object : YouTubePlayer.PlaybackEventListener {
+                            override fun onPlaying() {
+                                ivPoster.z = 0f
+                            }
 
-                        override fun onPaused() {
-                            iv_poster.z = 5f
-                        }
+                            override fun onPaused() {
+                                ivPoster.z = 5f
+                            }
 
-                        override fun onStopped() {
-                            iv_poster.z = 5f
-                        }
+                            override fun onStopped() {
+                                ivPoster.z = 5f
+                            }
 
-                        override fun onBuffering(b: Boolean) {
-                        }
+                            override fun onBuffering(b: Boolean) {
+                            }
 
-                        override fun onSeekTo(i: Int) {
-                        }
-                    })
+                            override fun onSeekTo(i: Int) {
+                            }
+                        })
+                    }
+                    Log.e("DetailActivity", "Youtube Player View initialization success")
+
                 }
-                Log.e("DetailActivity", "Youtube Player View initialization success")
 
-            }
+                override fun onInitializationFailure(arg0: YouTubePlayer.Provider, arg1: YouTubeInitializationResult) {
+                    Log.e("DetailActivity", "Youtube Player View initialization failed")
 
-            override fun onInitializationFailure(arg0: YouTubePlayer.Provider, arg1: YouTubeInitializationResult) {
-                Log.e("DetailActivity", "Youtube Player View initialization failed")
-
-            }
-        })
+                }
+            })
+        }
     }
 
     private fun initRecyclerview(){
@@ -197,7 +198,7 @@ class MovieDetailActivity : AppCompatActivity(){
                 super.onScrolled(recyclerView, dx, dy)
                 if (progress_bar.visibility != View.VISIBLE) {
                     if ((rv_review.layoutManager as LinearLayoutManager).findLastCompletelyVisibleItemPosition() == reviewList.size - 1) {
-                        val page = reviewList.size / 20 + 1
+                        val page = viewModel.page.value?.plus(1)
                         Log.d("MainActivity", "datanya page ke $page ${reviewList.size} ${reviewList.size/20}")
                         viewModel.page.value = page
                     }

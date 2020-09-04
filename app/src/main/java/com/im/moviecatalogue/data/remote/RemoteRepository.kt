@@ -48,11 +48,13 @@ class RemoteRepository() {
 
     fun allMoviesAsLiveData(page: String, genres: String): LiveData<ApiResponse<List<MovieEntity>>>{
         val result = MutableLiveData<ApiResponse<List<MovieEntity>>>()
-        val request = mapOf(
+        val request = mutableMapOf(
             "api_key" to BuildConfig.MOVIE_API_KEY,
             "language" to "en-US",
             "page" to page
         )
+
+        if(!genres.isNullOrEmpty())request["with_genres"] = genres
 
         try {
             runBlocking {

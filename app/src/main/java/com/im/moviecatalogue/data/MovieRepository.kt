@@ -44,14 +44,20 @@ class MovieRepository private constructor(
     }
 
     override fun allMovies(page: String, genres: String): LiveData<Resource<List<MovieEntity>>>{
+
+        val list : List<MovieEntity> = listOf()
+        val moviesList = MutableLiveData<List<MovieEntity>>()
+        moviesList.value = list
+
         return object :
                 NetworkBoundResource<List<MovieEntity>, List<MovieEntity>>(appExecutors) {
                 override fun shouldFetch(data: List<MovieEntity>): Boolean? {
-                    return data.isEmpty() || page.toInt() > 1
+                    return true
                 }
 
                 override fun loadFromDB(): LiveData<List<MovieEntity>> {
-                    return localRepository.allMovies(page.toInt())
+                    return if(genres.isNullOrEmpty())  localRepository.allMovies(page.toInt())
+                    else moviesList
                 }
 
                 override fun createCall(): LiveData<ApiResponse<List<MovieEntity>>> {
@@ -61,7 +67,8 @@ class MovieRepository private constructor(
                 }
 
                 override fun saveCallResult(data: List<MovieEntity>) {
-                    localRepository.insertMovies(data)
+                    if(genres.isNullOrEmpty()) localRepository.insertMovies(data)
+                    else moviesList.postValue(data)
                 }
             }.asLiveData()
     }
