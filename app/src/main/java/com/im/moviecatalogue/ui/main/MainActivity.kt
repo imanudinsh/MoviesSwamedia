@@ -1,12 +1,9 @@
 package com.im.moviecatalogue.ui.main
 
 
-import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -19,7 +16,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.im.moviecatalogue.R
 import com.im.moviecatalogue.data.local.entity.GenreEntity
 import com.im.moviecatalogue.data.local.entity.MovieEntity
-import com.im.moviecatalogue.ui.login.LoginActivity
 import com.im.moviecatalogue.viewmodel.ViewModelFactory
 import com.im.moviecatalogue.vo.Status
 import kotlinx.android.synthetic.main.activity_main.*
@@ -48,11 +44,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         sharedPref = getSharedPreferences(PREF_NAME, PRIVATE_MODE)
-        if (!sharedPref.getBoolean(IS_LOGIN, false)) {
-            val intent = Intent(this, LoginActivity::class.java)
-            startActivity(intent)
-            finish()
-        }
+
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
@@ -62,20 +54,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if(item.itemId == R.id.action_signout){
-            sharedPref.edit().putBoolean(IS_LOGIN, false).apply()
-            val intent = Intent(this, LoginActivity::class.java)
-            startActivity(intent)
-            finish()
-        }
-        return super.onOptionsItemSelected(item)
-    }
 
     private fun initRecyclerview(){
         adapter = MovieViewAdapter(this, moviesList)
